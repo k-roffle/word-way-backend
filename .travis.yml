@@ -10,11 +10,11 @@ script:
 - pytest
 deploy:
 - provider: script
-  script: bash scripts/deploy.sh staging
+  script: chmod +x ./scripts/deploy.sh && bash scripts/deploy.sh staging
   on:
     branch: word-way/develop
 - provider: script
-  script: bash scripts/deploy.sh production
+  script: chmod +x ./scripts/deploy.sh && bash scripts/deploy.sh production
   on:
     branch: word-way/master
 notifications:
