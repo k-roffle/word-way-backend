@@ -37,6 +37,12 @@
     $ mkvirtualenv -a `pwd` -p $(which python) venv
     ```
 
+- 필요한 환경 변수 셋팅
+
+   [우리말샘 API](https://opendict.korean.go.kr/) 토큰
+   ```
+   $ export WORD_API_TOKEN=<Token>
+   ```
 
 - dependencies 설치
    ```
