@@ -7,4 +7,4 @@ URL = postgresql://localhost:5432/word-way
 ECHO = true
 
 [WORD_API]
-URL = https://opendict.korean.go.kr/api/search
+URL = https://opendict.korean.go.kr/api/
