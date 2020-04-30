@@ -5,6 +5,7 @@ import typing
 import uuid
 import xml.etree.ElementTree as elemTree
 
+from konlpy.tag import Kkma
 from requests import get as requests_get
 from sqlalchemy import literal
 from sqlalchemy.orm.session import Session
@@ -13,7 +14,8 @@ from urllib.parse import urljoin
 from word_way.celery import celery
 from word_way.context import session
 from word_way.config import get_word_api_config
-from word_way.models import Pronunciation, Sentence, Word, WordSentenceAssoc
+from word_way.models import (IncludeWordRelation, Pronunciation, Sentence,
+                             Word, WordSentenceAssoc)
 from word_way.utils import convert_word_part
 
 __all__ = 'save_word', 'save_word_task',
@@ -85,6 +87,7 @@ def save_word(
             )
             session.add(word)
             session.flush()
+            save_include_word(word, session)
             save_example_sentence(word, session)
     session.commit()
     return pronunciation_id
@@ -122,3 +125,35 @@ def save_example_sentence(word: Word, session: Session) -> None:
         assoc = WordSentenceAssoc(word_id=word.id, sentence_id=sentence.id)
         session.add(assoc)
         session.flush()
+
+
+def save_include_word(word: Word, session: Session) -> None:
+    """단어의 포함어를 저장합니다.
+
+    :param word: 포함어를 저장할 대상 단어
+    :type word: :class:`Word`
+    :param session: 사용할 세션
+    :type session: :class:`sqlalchemy.orm.session.Session
+
+    """
+    kkma = Kkma()
+    for include_word, part in kkma.pos(word.contents):
+        pronunciation = session.query(Pronunciation).filter(
+            Pronunciation.pronunciation == include_word
+        ).one_or_none()
+        relation = None
+        if not pronunciation:
+            pronunciation = Pronunciation(pronunciation=include_word)
+            session.add(pronunciation)
+            session.flush()
+        else:
+            relation = session.query(IncludeWordRelation).filter(
+                IncludeWordRelation.criteria_id == word.id,
+                IncludeWordRelation.relation_id == pronunciation.id,
+            ).one_or_none()
+        if not relation:
+            relation = IncludeWordRelation(
+                criteria_id=word.id, relation_id=pronunciation.id,
+            )
+            session.add(relation)
+            session.flush()
