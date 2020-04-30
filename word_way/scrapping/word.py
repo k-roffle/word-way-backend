@@ -85,13 +85,13 @@ def save_word(
             )
             session.add(word)
             session.flush()
-            save_extra_info(word, session)
+            save_example_sentence(word, session)
     session.commit()
     return pronunciation_id
 
 
-def save_extra_info(word: Word, session: Session) -> None:
-    """단어의 예문과 유의어를 가져와 저장합니다.
+def save_example_sentence(word: Word, session: Session) -> None:
+    """단어의 예문을 가져와 저장합니다.
 
     :param word: 추가 정보를 저장할 단어
     :type word: :class:`Word`
@@ -114,8 +114,6 @@ def save_extra_info(word: Word, session: Session) -> None:
 
     tree = elemTree.fromstring(res.text)
     sense_info = tree.find('item').find('senseInfo')
-
-    # TODO: 유의어 정보도 저장해야합니다.
 
     for example_info in sense_info.findall('example_info'):
         sentence = Sentence(sentence=example_info.findtext('example'))
