@@ -1,6 +1,7 @@
 """:mod:`word_way.scrapping.word` --- 단어 정보 저장(DB)과 관련된 함수
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+import logging
 import typing
 import uuid
 import xml.etree.ElementTree as elemTree
@@ -19,6 +20,8 @@ from word_way.models import (IncludeWordRelation, Pronunciation, Sentence,
 from word_way.utils import convert_word_part
 
 __all__ = 'save_word', 'save_word_task',
+
+logger = logging.getLogger(__name__)
 
 
 @celery.task
@@ -39,7 +42,7 @@ def save_word(
     :rtype: typing.Optional[uuid.UUID]
 
     """
-
+    log = logger.getChild('save_word')
     # 단어 기본 정보 요청
     config = get_word_api_config()
     params = {
@@ -62,6 +65,7 @@ def save_word(
             continue
         pronunciation_word = \
             pronunciation_word.replace('-', '').replace('^', ' ')
+        log.info(f'Start saving the word ({pronunciation_word})')
         pronunciation = session.query(Pronunciation).filter(
             Pronunciation.pronunciation == pronunciation_word
         ).one_or_none()
@@ -89,6 +93,7 @@ def save_word(
             session.flush()
             save_include_word(word, session)
             save_example_sentence(word, session)
+        log.info(f'Done saving the word ({pronunciation_word})')
     session.commit()
     return pronunciation_id
 
@@ -102,6 +107,7 @@ def save_example_sentence(word: Word, session: Session) -> None:
     :type session: :class:`sqlalchemy.orm.session.Session
 
     """
+    log = logger.getChild('save_example_sentence')
     # 단어 추가 정보 요청
     config = get_word_api_config()
     params = {
@@ -119,12 +125,15 @@ def save_example_sentence(word: Word, session: Session) -> None:
     sense_info = tree.find('item').find('senseInfo')
 
     for example_info in sense_info.findall('example_info'):
-        sentence = Sentence(sentence=example_info.findtext('example'))
+        example = example_info.findtext('example')
+        log.info(f'Start saving the sentence({example}) about {word.id}')
+        sentence = Sentence(sentence=example)
         session.add(sentence)
         session.flush()
         assoc = WordSentenceAssoc(word_id=word.id, sentence_id=sentence.id)
         session.add(assoc)
         session.flush()
+        log.info(f'Done saving the sentence({example}) about {word.id}')
 
 
 def save_include_word(word: Word, session: Session) -> None:
@@ -136,8 +145,10 @@ def save_include_word(word: Word, session: Session) -> None:
     :type session: :class:`sqlalchemy.orm.session.Session
 
     """
+    log = logger.getChild('save_include_word')
     kkma = Kkma()
     for include_word, part in kkma.pos(word.contents):
+        log.info(f'Start saving the word ({include_word}) in {word.id}')
         pronunciation = session.query(Pronunciation).filter(
             Pronunciation.pronunciation == include_word
         ).one_or_none()
@@ -157,3 +168,4 @@ def save_include_word(word: Word, session: Session) -> None:
             )
             session.add(relation)
             session.flush()
+        log.info(f'Done saving the word ({include_word}) in {word.id}')
