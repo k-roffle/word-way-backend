@@ -6,7 +6,6 @@ import typing
 import uuid
 import xml.etree.ElementTree as elemTree
 
-from konlpy.tag import Kkma
 from requests import get as requests_get
 from sqlalchemy import literal
 from sqlalchemy.orm.session import Session
@@ -17,6 +16,7 @@ from word_way.context import session
 from word_way.config import get_word_api_config
 from word_way.models import (IncludeWordRelation, Pronunciation, Sentence,
                              Word, WordSentenceAssoc)
+from word_way.scrapping.word_parser import WordParser
 from word_way.utils import convert_word_part
 
 __all__ = 'save_word', 'save_word_task',
@@ -146,8 +146,8 @@ def save_include_word(word: Word, session: Session) -> None:
 
     """
     log = logger.getChild('save_include_word')
-    kkma = Kkma()
-    for include_word, part in kkma.pos(word.contents):
+    word_parser = WordParser()
+    for include_word, part in word_parser.parse(word.contents):
         log.info(f'Start saving the word ({include_word}) in {word.id}')
         pronunciation = session.query(Pronunciation).filter(
             Pronunciation.pronunciation == include_word
