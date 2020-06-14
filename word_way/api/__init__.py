@@ -2,13 +2,16 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 from flask import Blueprint
+from flask_restx import Api, Resource
 
-__all__ = 'api', 'ping',
-
-
-api = Blueprint('api', __name__)
+__all__ = 'blueprint',
 
 
-@api.route('/ping/', methods=['GET'])
-def ping():
-    return 'pong'
+blueprint = Blueprint('api', __name__)
+api = Api(blueprint)
+
+
+@api.route('/ping/')
+class HealthCheckApi(Resource):
+    def get(self):
+        return 'pong'
