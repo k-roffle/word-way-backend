@@ -2,7 +2,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 from flask import Blueprint, jsonify
-from flask_restx import Api, Resource
+from flask_restx import Api, Resource, fields
 
 from word_way.api.constant import API_PRE_PATH
 from word_way.api.serializer import serialize
@@ -15,52 +15,23 @@ from word_way.models import Pronunciation
 blueprint = Blueprint('word', __name__, url_prefix=f'{API_PRE_PATH}/words')
 api = Api(blueprint, doc='/doc/')
 
+parser = api.parser()
+parser.add_argument(
+    'words',
+    type=fields.List(fields.String),
+    location='query'
+)
+
 
 @api.route('/')
 class WordApi(Resource):
+    from word_way.api.type import pronunciationList
+
+    @api.expect(parser)
+    @api.response(200, '성공. 단어 검색 결과', model=pronunciationList)
     def get(self):
         """
-
-        [GET] /api/words/
-
-        Arguments
-            words: ["분리하다", "절단하다", "떨어지다", "분리"]
-
-        Response
-            [
-                {
-                    "id": "00000000-0000-0000-0000-000000000001",
-                    "pronunciation": "떼다",
-                    "words": [
-                        {
-                            "id": "00000000-0000-0000-0000-000000000001",
-                            "contents": "붙어 있거나 잇닿은 것을 떨어지게 하다.",
-                            "part": "verb",
-                            "related_pronunciations": ["잇닿은", "떨어지게 하다"]
-                        },
-                        {
-                            "id": "00000000-0000-0000-0000-000000000002",
-                            "contents": "남에게서 빌려 온 돈 따위를 돌려주지 않다.",
-                            "part": "verb",
-                            "related_pronunciations": ["남", "돈"]
-                        }
-                    ],
-                    "related_pronunciations": []
-                },
-                {
-                    "id": "00000000-0000-0000-0000-000000000002",
-                    "pronunciation": "꺾다",
-                    "words": [
-                        {
-                            "id": "00000000-0000-0000-0000-000000000003",
-                            "contents": "길고 탄력이 있거나 단단한 물체를 구부려...",
-                            "part": "verb",
-                            "related_pronunciations": []
-                        }
-                    ]
-                    "related_words": ["나아가다", "진보하다"]
-                }
-            ]
+        단어 검색 API
 
             NOTE 1: related_pronunciations 유의어
             NOTE 2: words.related_pronunciations 포함어
@@ -89,7 +60,7 @@ class WordApi(Resource):
         pronunciations = session.query(Pronunciation).all()
 
         return jsonify(
-            serialize([
+            data=serialize([
                 {
                     'id': p.id,
                     'pronunciation': p.pronunciation,
