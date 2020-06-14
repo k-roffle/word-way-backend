@@ -149,6 +149,9 @@ def save_include_word(word: Word, session: Session) -> None:
     word_parser = WordParser()
     for include_word, part in word_parser.parse(word.contents):
         log.info(f'Start saving the word ({include_word}) in {word.id}')
+        if part in word_parser.unused_parts:
+            log.info(f'The word ({include_word}, {part}) is in unused_parts')
+            continue
         pronunciation = session.query(Pronunciation).filter(
             Pronunciation.pronunciation == include_word
         ).one_or_none()

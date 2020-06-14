@@ -7,6 +7,8 @@ __all__ = 'WordParser',
 
 
 class WordParser:
+    unused_parts = ['Punctuation']
+
     def __new__(cls, *args, **kwargs):
         # Okt class 로딩 속도를 줄이기 위해 한 번만 생성합니다.
         if not hasattr(cls, 'instance'):
