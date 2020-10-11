@@ -17,9 +17,9 @@ from word_way.config import get_word_api_config
 from word_way.models import (IncludeWordRelation, Pronunciation, Sentence,
                              Word, WordSentenceAssoc)
 from word_way.scrapping.word_parser import WordParser
-from word_way.utils import convert_word_part
+from word_way.utils import convert_word_part, utc_now
 
-__all__ = 'save_word', 'save_word_task',
+__all__ = ('save_word', 'save_word_task', 'save_words_task',)
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,21 @@ logger = logging.getLogger(__name__)
 @celery.task
 def save_word_task(target_word: str):
     save_word(target_word, session)
+
+
+@celery.task
+def save_words_task():
+    """단어가 없는 발음을 가져와서 단어를 저장하는 테스크"""
+    subquery = session.query(Word).filter(
+        Word.pronunciation_id == Pronunciation.id
+    )
+    pronunciations = session.query(Pronunciation).filter(
+        ~subquery.exists(),
+        Pronunciation.scrapped_at.is_(None),
+    ).all()
+    for pronunciation in pronunciations:
+        save_word(pronunciation.pronunciation, session)
+    session.commit()
 
 
 def save_word(
@@ -38,7 +53,7 @@ def save_word(
     :type target_word: :class:`str`
     :param session: 사용할 세션
     :type session: :class:`sqlalchemy.orm.session.Session`
-    :return: target_word와 발음이 정확히 일치하는 발음 ID
+    :return: target_word와 발음이 정확히 일치하는 발음 ID, 없다면 None을 반환합니다
     :rtype: typing.Optional[uuid.UUID]
 
     """
@@ -93,6 +108,7 @@ def save_word(
             session.flush()
             save_include_word(word, session)
             save_example_sentence(word, session)
+        pronunciation.scrapped_at = utc_now()
         log.info(f'Done saving the word ({pronunciation_word})')
     session.commit()
     return pronunciation_id
