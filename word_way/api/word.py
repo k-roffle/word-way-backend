@@ -3,7 +3,7 @@
 """
 from flask import Blueprint, jsonify, request
 from flask_restx import Api, Resource, fields
-from sqlalchemy import or_
+from sqlalchemy import or_, literal
 
 from word_way.api.constant import API_PRE_PATH
 from word_way.api.serializer import serialize
@@ -11,7 +11,7 @@ from word_way.context import session
 
 __all__ = 'blueprint',
 
-from word_way.models import Pronunciation
+from word_way.models import Pronunciation, SynonymsWordRelation
 
 blueprint = Blueprint('word', __name__, url_prefix=f'{API_PRE_PATH}/words')
 api = Api(blueprint, doc='/doc/')
@@ -42,12 +42,6 @@ class WordApi(Resource):
             ** 검색 결과 순서
             - 검색어와 동일한 발음을 가진 단어 (:class:`Word`)
             - 검색어가 유의어에 포함된 단어 (:class:`SynonymsWordRelation`)
-                : select * from pronunciation where id in (
-                    select criteria_id from synonyms_word_relation
-                    where related_id = (
-                        select id from pronunciation where pronunciation = '단어'
-                    )
-                );
             - 검색어가 의미에 포함된 단어 (:class:`IncludeWordRelation`)
                 : select * from word where id in (
                     select criteria_id from include_word_relation
@@ -61,12 +55,27 @@ class WordApi(Resource):
         query = session.query(Pronunciation)
 
         if keywords:
-            query = query.filter(
+            base_query = query
+            order_column = 'priority'
+
+            word_query = base_query.filter(
                 or_(*[
                     Pronunciation.pronunciation.like(f'%{keyword.strip()}%')
                     for keyword in keywords
                 ]),
-            )
+            ).add_column(literal(0).label(order_column))
+
+            synonyms_query = base_query.filter(
+                Pronunciation.id.in_(
+                    session.query(SynonymsWordRelation.criteria_id).filter(
+                        SynonymsWordRelation.related_pronunciations.any(
+                            Pronunciation.pronunciation.in_(keywords)
+                        ),
+                    ).subquery()
+                ),
+            ).add_column(literal(1).label(order_column))
+
+            query = word_query.union(synonyms_query).order_by(order_column)
 
         pronunciations = query.all()
         return jsonify(
@@ -84,6 +93,6 @@ class WordApi(Resource):
                         } for word in p.words
                     ],
                     'related_words': p.related_synonyms_pronunciations,
-                } for p in pronunciations
+                } for p, _ in pronunciations
             ])
         )
