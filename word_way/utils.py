@@ -1,4 +1,8 @@
+import datetime
+
 from word_way.enum import WordPart
+
+__all__ = ('convert_word_part', 'utc_now',)
 
 
 def convert_word_part(part: str):
@@ -12,3 +16,7 @@ def convert_word_part(part: str):
         '부사': WordPart.adverb,
         '감탄사': WordPart.interjection,
     }.get(part, WordPart.unknown)
+
+
+def utc_now():
+    return datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
