@@ -8,7 +8,7 @@ __all__ = 'blueprint',
 
 
 blueprint = Blueprint('api', __name__)
-api = Api(blueprint)
+api = Api(blueprint, doc='/doc/')
 
 
 @api.route('/ping/')
