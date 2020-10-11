@@ -1,8 +1,9 @@
 """:mod:`word_way.api.word` --- Word API
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_restx import Api, Resource, fields
+from sqlalchemy import or_
 
 from word_way.api.constant import API_PRE_PATH
 from word_way.api.serializer import serialize
@@ -17,9 +18,9 @@ api = Api(blueprint, doc='/doc/')
 
 parser = api.parser()
 parser.add_argument(
-    'words',
-    type=fields.List(fields.String),
-    location='query'
+    'keywords',
+    type=fields.List(fields.String, description='사용자가 입력한 검색 키워드 리스트'),
+    location='query',
 )
 
 
@@ -40,7 +41,6 @@ class WordApi(Resource):
 
             ** 검색 결과 순서
             - 검색어와 동일한 발음을 가진 단어 (:class:`Word`)
-                : select * from pronunciation where pronunciation like '%단어%';
             - 검색어가 유의어에 포함된 단어 (:class:`SynonymsWordRelation`)
                 : select * from pronunciation where id in (
                     select criteria_id from synonyms_word_relation
@@ -57,8 +57,18 @@ class WordApi(Resource):
                 );
 
         """
-        pronunciations = session.query(Pronunciation).all()
+        keywords = request.args.getlist('keywords')
+        query = session.query(Pronunciation)
 
+        if keywords:
+            query = query.filter(
+                or_(*[
+                    Pronunciation.pronunciation.like(f'%{keyword.strip()}%')
+                    for keyword in keywords
+                ]),
+            )
+
+        pronunciations = query.all()
         return jsonify(
             data=serialize([
                 {
