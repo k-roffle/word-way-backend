@@ -1,7 +1,9 @@
 import typing
 import uuid
 
-from sqlalchemy import Column, ForeignKey, Integer, Unicode, UniqueConstraint
+from sqlalchemy import (
+    Column, DateTime, ForeignKey, Integer, Unicode, UniqueConstraint
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy_enum34 import EnumType
 from sqlalchemy_utils.types.uuid import UUIDType
@@ -33,6 +35,9 @@ class Pronunciation(Base):
 
     #: (:class:`str`) 발음
     pronunciation = Column(Unicode, unique=True, nullable=False)
+
+    #: (:class:`datetime.datetime`) 발음에 해당하는 단어들을 스크래핑한 시각
+    scrapped_at = Column(DateTime(timezone=True))
 
     words = relationship('Word', uselist=True, back_populates='pronunciation')
 
