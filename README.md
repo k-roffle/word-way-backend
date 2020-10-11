@@ -104,4 +104,12 @@
     docker run --rm -d -p <Port Number You Want>:2222 -v $PWD/word_way:/app/word_way word-way/backend:latest
     ```
 
+### Swagger 문서 확인
+
+API endpoint 끝에 `/doc`을 붙여 확인 할 수 있습니다.
+
+e.g.
+- http://<HOST>:<PORT>/api/words/doc/
+
+
 [Build Status]: https://travis-ci.org/word-way/word-way-backend.svg?branch=master
